@@ -16,6 +16,7 @@
 #include <limits>
 #include <sys/stat.h>
 #include <unordered_set>
+#include <regex>
 
 namespace onnx2trt
 {
@@ -451,8 +452,20 @@ bool isDDSOp(char const* op_name)
 }
 
 std::pair<bool, ModelImporter::SubGraphSupportVector_t> ModelImporter::doSupportsModel(
-    void const* serialized_onnx_model, size_t serialized_onnx_model_size, char const* model_path)
+    void const* serialized_onnx_model, size_t serialized_onnx_model_size, char const* model_path, char const* filter_nodes)
 {
+    std::unordered_set<std::string> filter_nodes_set;
+    const std::regex re(",");
+    std::string filter_nodes_str = filter_nodes;
+    std::sregex_token_iterator iter(filter_nodes_str.begin(), filter_nodes_str.end(), re, -1);
+    const std::sregex_token_iterator end;
+    while (iter != end) {
+        if (std::string(*iter).size() != 0) {
+            filter_nodes_set.emplace(*iter);
+        }
+        iter++;
+    }
+
     ::ONNX_NAMESPACE::ModelProto model;
     Status status = deserializeOnnxModel(serialized_onnx_model, serialized_onnx_model_size, &model);
 
@@ -517,6 +530,17 @@ std::pair<bool, ModelImporter::SubGraphSupportVector_t> ModelImporter::doSupport
         return std::make_pair<bool, SubGraphSupportVector_t>(false, {});
     }
 
+    auto nodesFilter = [&filter_nodes_set] (const std::string& node_name) {
+        for (auto iter = filter_nodes_set.begin(); iter != filter_nodes_set.end(); iter++) {
+        if (node_name.find(*iter) !=  node_name.npos) {
+                std::cout << "filter ops not using trt:  " << node_name << std::endl;
+                return true;
+            }
+        }
+        return false;
+    };
+
+
     SubGraphSupportVector_t supportVector;
     for (int32_t node_idx : topological_order)
     {
@@ -525,10 +549,12 @@ std::pair<bool, ModelImporter::SubGraphSupportVector_t> ModelImporter::doSupport
         //     1. It is not a node that requires DDS
         //     2. It is not directly connected to an unsupported input
         //     3. The importer function did not throw an assertion
+        //     4. It is not in filter_nodes_set.
         bool unsupportedDDS = isDDSOp(node.op_type().c_str());
         bool unsupportedInput = (input_node.empty()) ? false : checkForInput(node);
         bool unsuccessfulParse = node_idx == error_node;
-        if (!unsupportedDDS && !unsupportedInput && !unsuccessfulParse)
+        bool unsupportedFilterNodes = nodesFilter(node.name());
+        if (!unsupportedDDS && !unsupportedInput && !unsuccessfulParse && !unsupportedFilterNodes)
         {
             if (newSubGraph)
             {
@@ -558,12 +584,12 @@ std::pair<bool, ModelImporter::SubGraphSupportVector_t> ModelImporter::doSupport
 }
 
 bool ModelImporter::supportsModel(void const* serialized_onnx_model, size_t serialized_onnx_model_size,
-    SubGraphCollection_t& sub_graph_collection, char const* model_path) noexcept
+    SubGraphCollection_t& sub_graph_collection, char const* model_path, const char* filter_nodes) noexcept
 {
     ONNXTRT_TRY
     {
         std::pair<bool, SubGraphSupportVector_t> result
-            = doSupportsModel(serialized_onnx_model, serialized_onnx_model_size, model_path);
+            = doSupportsModel(serialized_onnx_model, serialized_onnx_model_size, model_path, filter_nodes);
         bool supports = result.first;
         SubGraphSupportVector_t supportVector = result.second;
 

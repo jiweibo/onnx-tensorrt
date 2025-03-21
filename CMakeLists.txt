@@ -56,7 +56,7 @@ set(IMPORTER_SOURCES
   weightUtils.cpp
   WeightsContext.cpp
   TensorOrWeights.cpp
-  errorHelpers.cpp
+  # errorHelpers.cpp
 )
 
 if (BUILD_ONNXIFI)

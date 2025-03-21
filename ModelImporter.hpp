@@ -46,7 +46,8 @@ private:
         1U << static_cast<uint32_t>(
             nvonnxparser::OnnxParserFlag::kNATIVE_INSTANCENORM)}; // kNATIVE_INSTANCENORM is ON by default.
     std::pair<bool, SubGraphSupportVector_t> doSupportsModel(
-        void const* serialized_onnx_model, size_t serialized_onnx_model_size, char const* model_path = nullptr);
+        void const* serialized_onnx_model, size_t serialized_onnx_model_size,
+        char const* model_path = nullptr, char const* filter_nodes = nullptr);
 
 public:
     ModelImporter(nvinfer1::INetworkDefinition* network, nvinfer1::ILogger* logger) noexcept
@@ -60,7 +61,8 @@ public:
         const char* model_path = nullptr) noexcept override;
 
     bool supportsModel(void const* serialized_onnx_model, size_t serialized_onnx_model_size,
-        SubGraphCollection_t& sub_graph_collection, const char* model_path = nullptr) noexcept override;
+        SubGraphCollection_t& sub_graph_collection, const char* model_path = nullptr,
+        const char* filter_nodes = nullptr) noexcept override;
     bool supportsModelV2(void const* serialized_onnx_model, size_t serialized_onnx_model_size,
         char const* model_path = nullptr) noexcept override;
 

@@ -224,7 +224,7 @@ public:
     //! \return true if the model is supported
     //!
     TRT_DEPRECATED virtual bool supportsModel(void const* serialized_onnx_model, size_t serialized_onnx_model_size,
-        SubGraphCollection_t& sub_graph_collection, const char* model_path = nullptr) noexcept = 0;
+        SubGraphCollection_t& sub_graph_collection, const char* model_path = nullptr, const char* filter_nodes = nullptr) noexcept = 0;
 
     //!
     //!\brief Parse a serialized ONNX model into the TensorRT network
